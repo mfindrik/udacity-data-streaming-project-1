@@ -5,7 +5,7 @@ import time
 
 from confluent_kafka import avro
 from confluent_kafka.admin import AdminClient, NewTopic
-from confluent_kafka.avro import AvroProducer
+from confluent_kafka.avro import AvroProducer, CachedSchemaRegistryClient
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class Producer:
         #
         self.broker_properties = {
             "BROKER_URL": "PLAINTEXT://localhost:9092",
-            "SCHEMA_REGISTRY_UR"L: "http://localhost:8081",
+            "SCHEMA_REGISTRY_URL": "http://localhost:8081",
             "group.id": self.topic_name
         }
 
@@ -48,11 +48,11 @@ class Producer:
             self.create_topic()
             Producer.existing_topics.add(self.topic_name)
 
-        # TODO: Configure the AvroProducer
         self.producer = AvroProducer(
-            {"bootstrap.server": self.broker_properties["BROKER_URL"]},
-            schema_registry= CachedSchemaRegistryClient(
+            {"bootstrap.servers": self.broker_properties["BROKER_URL"]}, 
+            schema_registry=CachedSchemaRegistryClient(
                 {"url": self.broker_properties["SCHEMA_REGISTRY_URL"]},
+            )
         )
 
     def create_topic(self):
@@ -63,12 +63,12 @@ class Producer:
         # the Kafka Broker.
         #
         #
-        client = AdminClient({self.broker_properties["BROKER_URL"]})
+        client = AdminClient({"bootstrap.servers": self.broker_properties["BROKER_URL"]})
         topic = NewTopic(self.topic_name,
                  num_partitions = self.num_partitions,
                  replication_factor = self.num_replicas)
         client.create_topics([topic])
-        logger.info("topic creation kafka integration incomplete - skipping")
+        logger.info("topic creation kafka integration completed.")
 
     def close(self):
         """Prepares the producer for exit by cleaning up the producer"""
@@ -78,7 +78,6 @@ class Producer:
         #
         #
         self.producer.flush()
-        logger.info("producer close incomplete - skipping")
 
     def time_millis(self):
         """Use this function to get the key for Kafka Events"""
